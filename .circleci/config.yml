@@ -1,0 +1,19 @@
+version: 2.1
+
+jobs:
+
+  no-op:
+    docker:
+      - image: cimg/base:stable
+    steps:
+      - run:
+          name: Nothing to do
+          command: |
+            echo "Nothing to do (other than keep the build green)"
+
+workflows:
+  version: 2
+  
+  noop:
+    jobs:
+      - no-op
