@@ -21,7 +21,7 @@ jobs:
           name: Generate Load
           command: |
             version="<< pipeline.parameters.version >>"
-            ab -T 'application/json' -p test-appointment.json -c 1 -n 300 http://staff.eu.bizdata-demo.vamp-dev.cloud/$version/appointments/attend
+            ab -T 'application/json' -p load-test/test-appointment.json -c 1 -n 300 http://staff.eu.bizdata-demo.vamp-dev.cloud/$version/appointments/attend
 
   no-op:
     docker:
