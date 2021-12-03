@@ -133,7 +133,7 @@ const getAppointmentSlots = () => {
   });
 };
 
-const userManagement = new UserManagementClient('user-management:5051');
+const userManagement = new UserManagementClient(process.env.USER_MANAGEMENT_URI);
 
 app.use(useragent.express())
 app.use(express.json())
