@@ -154,7 +154,8 @@ app.post('/appointments/book', (req, res) => {
         }
         console.log(req.body);
 
-        const newAppointment = { medicalId: req.body.medicalId, userId: req.body.userId };  
+        var date = new Date().setHours(0,0,0,0);
+        const newAppointment = { medicalId: req.body.medicalId, userId: req.body.userId, date: date};  
         const appointments = db.collection(dbAppointmentsCollection);
         return appointments.findOneAndUpdate({ medicalId: req.body.medicalId }, { $set: newAppointment }, { upsert: true });
       })
