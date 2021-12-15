@@ -33,6 +33,80 @@ jobs:
           command: |
             echo "Nothing to do (other than keep the build green)"
 
+  build:
+    docker:
+      - image: cimg/base:stable
+    steps:
+      - checkout
+      - run:
+          name: Generate version
+          command: |
+            wget https://github.com/magneticio/semver-shell/releases/download/v0.2.0/semver_version.sh
+            chmod u+x semver_version.sh
+            ./semver_version.sh -l text -o none
+      - run:
+          name: Update package.json
+          command: |
+            apt-get update
+            apt-get install jq
+            source ./version_env.sh
+            jq --arg version "$VERSION" '.version=$version' package.json > package.json.tmp && mv package.json.tmp package.json
+      - run: git config --global user.email "${GITHUB_EMAIL}"
+      - run: git config --global user.name "${CIRCLE_PROJECT_USERNAME}"
+      - run:
+          name: Update version tag
+          command: |
+            ./semver_version.sh
+      - persist_to_workspace:
+          root: .
+          paths: ["version_env.sh"]
+      - setup_remote_docker:
+          docker_layer_caching: true
+      - run:
+          name: Build Docker image
+          command: |
+            IMAGE=vampio/vamp-bizdata-demo-appointment
+            source ./version_env.sh
+            [ ! -z "$VERSION" ]
+            docker login -u "$DOCKER_USER" -p "$DOCKER_PASS"
+            docker build -t $IMAGE:$VERSION --push .
+
+  deploy:
+    docker:
+      - image: cimg/base:stable
+    steps:
+      - attach_workspace:
+          at: .
+      - run:
+          name: Install yq
+          command: |
+            image=vampio/vamp-bizdata-demo-appointment
+            wget https://github.com/mikefarah/yq/releases/download/v4.16.1/yq_linux_amd64 -O /usr/bin/yq
+            chmod +x /usr/bin/yq
+      - run:
+          name: Checkout Argo CD repo
+          command: |
+            git clone https://github.com/magneticio/vamp-bizdata-demo-argocd
+            cd argocd-preprod/appointment
+      - run:
+          name: Add new Deployment
+          command: |
+            source ./version_env.sh
+            name=deployment-${VERSION//./-}
+            image=vampio/vamp-bizdata-demo-appointment
+            cp templates/deployment-template.yaml ./$name.yaml         
+            yq eval '.metadata.name = "'$name'"' ./$name.yaml
+            yq eval '.metadata.labels.version = "'$VERSION'"' ./$name.yaml
+            yq eval '.spec.selector.matchLabels.version = "'$VERSION'"' ./$name.yaml
+            yq eval '.spec.template.metadata.labels.version = "'$VERSION'"' ./$name.yaml
+            yq eval '(.spec.template.spec.containers.[] | select(.image == "'$image':*") | .image) = "'$image':'$VERSION'"'
+      - run:
+          name: Update Argo CD repo
+          command: |
+            git add .
+            git commit -m "Bumped version to v$VERSION"
+            git push
+
 workflows:
   version: 2
   
@@ -44,9 +118,17 @@ workflows:
     jobs:
       - load-test
 
-  noop:
+  build-and-deploy:
     when:
       and:
       - not: << pipeline.parameters.load_test >>
     jobs:
-      - no-op
+      - build:
+          context: vamp-build-context
+          filters:
+            branches:
+              only:
+                - main
+      - deploy:
+          requires:
+            - build
