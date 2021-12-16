@@ -1,7 +1,7 @@
 version: 2.1
 
 orbs:
-  jq: circleci/jq
+  jq: circleci/jq@2.2.0
 
 parameters:
   load_test:
