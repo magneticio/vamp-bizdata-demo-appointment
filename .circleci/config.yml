@@ -47,7 +47,7 @@ jobs:
           command: |
             wget https://github.com/magneticio/semver-shell/releases/download/v0.2.0/semver_version.sh
             chmod u+x semver_version.sh
-            ./semver_version.sh -l text -o none
+            ./semver_version.sh -l text -o none -p ""
       - run:
           name: Update package.json
           command: |
@@ -57,7 +57,7 @@ jobs:
       - run:
           name: Update version tag
           command: |
-            ./semver_version.sh
+            ./semver_version.sh -p ""
       - persist_to_workspace:
           root: .
           paths: ["version_env.sh"]
@@ -70,7 +70,8 @@ jobs:
             source ./version_env.sh
             [ ! -z "$VERSION" ]
             docker login -u "$DOCKER_USER" -p "$DOCKER_PASS"
-            docker build -t $IMAGE:$VERSION --push .
+            docker build -t $IMAGE:$VERSION .
+            docker push $IMAGE:$VERSION
 
   deploy:
     docker:
