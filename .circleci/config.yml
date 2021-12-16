@@ -1,5 +1,8 @@
 version: 2.1
 
+orbs:
+  jq: circleci/jq
+
 parameters:
   load_test:
     type: boolean
@@ -38,6 +41,7 @@ jobs:
       - image: cimg/base:stable
     steps:
       - checkout
+      - jq/install
       - run:
           name: Generate version
           command: |
@@ -47,9 +51,6 @@ jobs:
       - run:
           name: Update package.json
           command: |
-            apt-get update
-            apt-get install jq
-            source ./version_env.sh
             jq --arg version "$VERSION" '.version=$version' package.json > package.json.tmp && mv package.json.tmp package.json
       - run: git config --global user.email "${GITHUB_EMAIL}"
       - run: git config --global user.name "${CIRCLE_PROJECT_USERNAME}"
